@@ -1,0 +1,5 @@
+kubectl.sh
+tmp/
+tools/
+volume/
+xube/
