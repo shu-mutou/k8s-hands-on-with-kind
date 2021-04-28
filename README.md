@@ -5,7 +5,7 @@ Kubernetes sandbox
 
 * Run `./run-kind.sh`. It downloads `kind` and `kubectl`, then create Kubernetes cluster.
 
-## Exercise 1
+## Exercise 1 - enough for common application developer
 
 * Deploy nginx
   ```
@@ -70,24 +70,61 @@ Kubernetes sandbox
   ```
   ./kubectl.sh get pv,pvc,pod
   ```
-* Add `volume/nginx/index.html` and confirm `http://localhost:30001` via browser.
+* Add `volume/nginx/index.html`.
+  ```
+  echo "Hello!" > volume/nginx/index.html
+  ```
+  Then confirm `http://localhost:30001` via browser.
 
-## Exercise 2
+## Exercise 2 - required for CKAD
+
+* Scheduling pods for Ingress controller.
+  Confirm current labels attached in nodes.
+  ```
+  ./kubectl.sh get nodes --show-labels
+  ```
+  Set label into control-plane node for Ingress controller.
+  ```
+  ./kubectl.sh label nodes kind-cluster-control-plane ingress-ready='true'
+  ```
+  Note: `ingress-ready='true'` is used in the following manifest for `ingress-nginx-controller`. The pod for Ingress controller will be scheduled by this label.
+  Confirm labels added in control-plane nodes.
+  ```
+  ./kubectl.sh get nodes kind-cluster-control-plane --show-labels
+  ```
+* Install Ingress NGINX Controller
+  ```
+  wget -nc -O tmp/ingress-nginx-controller.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
+  ```
+  And add `nodePort: 30080` and `nodePort: 30443` into `ingress-nginx-controller` Service.
+  Then install it:
+  ```
+  ./kubectl.sh apply -f tmp/ingress-nginx-controller.yaml
+  ```
+* Create Ingress for nginx Service via nginx-ingress-controller and modify nginx Service.
+  See `example/nginx-ingress.yaml`, create `test/` directory for Ingress `nginx-ingress`, and create `index.html` file into it.
+  ```
+  mkdir -p volume/nginx/test
+  echo "Here is /test/ via Ingress" > volume/nginx/test/index.html
+  ```
+  Then run following:
+  ```
+  ./kubectl.sh apply -f example/nginx-ingress.yaml
+  ```
+* Access nginx `http://localhost:30080/test/` via Ingress.
 
 _TBD_
 
-* Create Ingress using nginx-ingress-controller.
-* Access nginx via Ingress.
-
-## Exercise 3
-
-_TBD_
-
-* Scheduling pods.
+* Rollout deployment
+  + Update image
+  + History
+  + Restart
+  + Undo
 
 ## References for kind
 
 * [Configure file for kind](https://kind.sigs.k8s.io/docs/user/configuration/)
   + [Configure directory for Persistent Volume](https://kind.sigs.k8s.io/docs/user/configuration/#extra-mounts)
   + [Configure port for NodePort](https://kind.sigs.k8s.io/docs/user/configuration/#extra-port-mappings)
+* [Ingress NGINX](https://kind.sigs.k8s.io/docs/user/ingress#ingress-nginx)
 * [LoadBalancer with metallb](https://kind.sigs.k8s.io/docs/user/loadbalancer/)

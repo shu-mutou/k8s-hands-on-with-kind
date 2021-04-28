@@ -60,6 +60,10 @@ nodes:
     hostPort: 30003
   - containerPort: 30004
     hostPort: 30004
+  - containerPort: 30080
+    hostPort: 30080
+  - containerPort: 30443
+    hostPort: 30443
 - role: worker
   extraMounts:
   - hostPath: ${PV_PATH}
@@ -154,6 +158,8 @@ ${KD_TOKEN}
 
 Also, token is stored in "${KUBE_DIR}".
 !!! THIS TOKEN HAS cluster-admin ROLE, SO IT CAN DO ANYTHING !!!
+
+The ports "30080" and "30443" are kept for Ingress controller.
 
 Directory for volumes is created at "${PV_PATH}".
 Create sub-directories under above and use them for "PersistentVolume" with "storageClassName: standard" or container volumes with path "/volume".
