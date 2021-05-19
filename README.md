@@ -34,7 +34,7 @@ Kubernetes sandbox
     - Specify applicable version of `kindest/node` for your `kind` branch with hash from [release site for kind](https://github.com/kubernetes-sigs/kind/releases).
     - Default: `kindest/node:v1.21.1@sha256:fae9a58f17f18f06aeac9772ca8b5ac680ebbed985e266f711d936e91d113bad`
 
-### 3. Use custom Kubernetes (optional)
+### 2. Use custom Kubernetes (optional)
 
 NOTE: Kubernetes v1.21.0 or later needs `docker buildx` to build. And `docker buildx` needs `docker ce` v19.03 or later. In ubuntu 20.04, the version of docker is v19.03.x but not enabled `buildx`. If so, setup `buildx` as followings.
 
