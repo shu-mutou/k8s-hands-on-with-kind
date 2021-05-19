@@ -6,7 +6,5 @@ cd ${DIR}
 TOOL_DIR="${DIR}/tools"
 KIND_BIN="${TOOL_DIR}/kind"
 
-CLUSTER_NAME="kind-cluster"
-
 # Shutdown cluster with kind
-${KIND_BIN} delete cluster --name=${CLUSTER_NAME}
+${KIND_BIN} delete cluster --name=kind-cluster

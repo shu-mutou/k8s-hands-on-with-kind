@@ -3,84 +3,44 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd ${DIR}
 
-KIND_VERSION="v0.10.0"
-# Select kubernetes version for kind from https://github.com/kubernetes-sigs/kind/releases
-KIND_NODE_VERSION="v1.20.2@sha256:8f7ea6e7642c0da54f04a7ee10431549c0257315b3a634f6ef2fecaaedb19bab"
-KUBECTL_VERSION=${KUBECTL_VERSION:-"$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)"}
+usage() {
+  echo "Usage: $0 [-c <kind config file>] [-x <do not deploy dashboard>]" 1>&2
+  exit 1
+}
 
-CLUSTER_NAME="kind-cluster"
+while getopts :i:xh OPT
+do
+  case $OPT in
+    c) KIND_CONFIG=$OPTARG ;;
+    x) IGNORE_DASHBOARD=1 ;;
+    h) usage ;;
+    \?) usage ;;
+  esac
+done
 
+# Configs
+TMP_DIR="./tmp"
+KIND_CONFIG=${KIND_CONFIG:-"${TMP_DIR}/kind.yaml"}
+
+# Setup
 TOOL_DIR="${DIR}/tools"
 KIND_BIN="${TOOL_DIR}/kind"
 KUBECTL_BIN="${TOOL_DIR}/kubectl"
-KUBE_DIR="${DIR}/xube"
-KUBECONFIG="${KUBE_DIR}/config"
-KUBE_CACHE="${KUBE_DIR}/cache"
-KUBECTL_SH="${DIR}/kubectl.sh"
 PV_PATH="${DIR}/volume"
 
-TMP_DIR="${DIR}/tmp"
+# Re-create working directory for kubectl
+KUBECTL_SH="${DIR}/kubectl.sh"
 mkdir -p ${TMP_DIR}
-
-# Download kind and kubectl
-mkdir -p ${TOOL_DIR}
-ARCH=$(uname | awk '{print tolower($0)}')
-KIND_URL="https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-${ARCH}-amd64"
-wget -nc -O ${KIND_BIN} ${KIND_URL}
-chmod +x ${KIND_BIN}
-${KIND_BIN} version
-
-KUBECTL_URL="https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/${ARCH}/amd64/kubectl"
-wget -nc -O ${KUBECTL_BIN} ${KUBECTL_URL}
-chmod +x ${KUBECTL_BIN}
-
-# Create directory for persistent volume
-mkdir -p ${PV_PATH}
-
-# Create config file for kind cluster
-KIND_YAML="${TMP_DIR}/kind.yaml"
-cat <<EOF > ${KIND_YAML}
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-name: ${CLUSTER_NAME}
-nodes:
-- role: control-plane
-  image: kindest/node:${KIND_NODE_VERSION}
-  extraMounts:
-  - hostPath: ${PV_PATH}
-    containerPath: /volume
-  extraPortMappings:
-  - containerPort: 30000
-    hostPort: 30000
-  - containerPort: 30001
-    hostPort: 30001
-  - containerPort: 30002
-    hostPort: 30002
-  - containerPort: 30003
-    hostPort: 30003
-  - containerPort: 30004
-    hostPort: 30004
-  - containerPort: 30080
-    hostPort: 30080
-  - containerPort: 30443
-    hostPort: 30443
-- role: worker
-  extraMounts:
-  - hostPath: ${PV_PATH}
-    containerPath: /volume
-- role: worker
-  extraMounts:
-  - hostPath: ${PV_PATH}
-    containerPath: /volume
-EOF
+KUBECONFIG="${TMP_DIR}/config"
+KUBE_CACHE="${TMP_DIR}/cache"
+mkdir -p ${KUBE_CACHE}
 
 # Re-create cluster with kind
-${KIND_BIN} delete cluster --name=${CLUSTER_NAME}
-${KIND_BIN} create cluster --config=${KIND_YAML}
+${KIND_BIN} delete cluster --name=kind-cluster
+${KIND_BIN} create cluster --config=${KIND_CONFIG}
 
 # Get kubeconfig
-mkdir -p ${KUBE_CACHE}
-${KIND_BIN} get kubeconfig --name=${CLUSTER_NAME} > ${KUBECONFIG}
+${KIND_BIN} get kubeconfig --name=kind-cluster > ${KUBECONFIG}
 
 # Create kubectl.sh
 cat <<EOF > ${KUBECTL_SH}
@@ -90,76 +50,32 @@ ${KUBECTL_BIN} --kubeconfig ${KUBECONFIG} --cache-dir ${KUBE_CACHE} \${@}
 EOF
 chmod +x ${KUBECTL_SH}
 
-# Current context is "kind" + ${CLUSTER_NAME}
-${KUBECTL_SH} version
-${KUBECTL_SH} cluster-info --context kind-${CLUSTER_NAME}
+# Gather info
+KIND_INFO="$(${KIND_BIN} version)"
+KUBECLT_INFO="$(${KUBECTL_SH} version)"
+CLUSTER_INFO="$(${KUBECTL_SH} cluster-info --context kind-kind-cluster)"
 
-# Deploy Kubernetes Dashboard
-${KUBECTL_SH} apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/alternative.yaml
-${KUBECTL_SH} delete service kubernetes-dashboard -n kubernetes-dashboard
-KD_SERVICE=${TMP_DIR}/kd-service.yaml
-cat <<EOF > ${KD_SERVICE}
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  labels:
-    k8s-app: kubernetes-dashboard
-  name: kubernetes-dashboard-cluster-admin
-  namespace: kubernetes-dashboard
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-  - kind: ServiceAccount
-    name: kubernetes-dashboard
-    namespace: kubernetes-dashboard
-
----
-
-kind: Service
-apiVersion: v1
-metadata:
-  labels:
-    k8s-app: kubernetes-dashboard
-  name: kubernetes-dashboard
-  namespace: kubernetes-dashboard
-spec:
-  type: NodePort
-  ports:
-    - port: 80
-      targetPort: 9090
-      nodePort: 30000
-  selector:
-    k8s-app: kubernetes-dashboard
-EOF
-${KUBECTL_SH} apply -f ${KD_SERVICE}
-
-# Get token for dashboard login
-SECRET_NAME=$(${KUBECTL_SH} -n kubernetes-dashboard get sa kubernetes-dashboard -ojsonpath="{.secrets[0].name}")
-KD_TOKEN=$(${KUBECTL_SH} -n kubernetes-dashboard get secrets ${SECRET_NAME} -o=jsonpath='{.data.token}' | base64 -d)
-echo ${KD_TOKEN} > "${KUBE_DIR}/kd-token"
-
-# Finish
+# Reports
 cat <<EOF
-Kubernetes cluster is ready to use.
 
-"kubectl" and "kind" is downloaded in "${TOOL_DIR}"
-"kubeconfig" and cache directory for "kubectl" is created in "${KUBE_DIR}"
+!!! Kubernetes cluster is ready to use !!!
 
-Instead of "kubectl", use "./kubectl.sh" that configured to use above settings.
+kind info:
+${KIND_INFO}"
 
-TCP Ports "30001-30004" can be mapped to "NodePort" Services or Ingress Controllers .
+cluster info:
+${CLUSTER_INFO}
 
-The port "30000" is mapped to Kubernetes Dashboard.
-You can access dashboard with "http://localhost:30000/#/login" and login using following token:
+kubectl info:
+${KUBECTL_INFO}
 
-${KD_TOKEN}
+"kubeconfig" and cache directory for "kubectl" is created in "${TMP_DIR}"
 
-Also, token is stored in "${KUBE_DIR}".
-!!! THIS TOKEN HAS cluster-admin ROLE, SO IT CAN DO ANYTHING !!!
+Instead of "kubectl" in ${TOOL_DIR}, use "./kubectl.sh" that configured to use above "kubeconfig".
 
-The ports "30080" and "30443" are kept for Ingress controller.
+TCP ports "30001-30004" can be mapped to "NodePort" Services.
+TCP ports "30080" and "30443" are kept for Ingress controller.
+TCP ports "30000" is kept for Kubernetes Dashboard.
 
 Directory for volumes is created at "${PV_PATH}".
 Create sub-directories under above and use them for "PersistentVolume" with "storageClassName: standard" or container volumes with path "/volume".
@@ -169,3 +85,9 @@ Create sub-directories under above and use them for "PersistentVolume" with "sto
 !!! DO NOT USE THIS CLUSTER FOR PRODUCTION       !!!
 
 EOF
+
+# Deploy Kubernetes Dashboard
+IGNORE_DASHBOARD=${IGNORE_DASHBOARD:-0}
+if [ ! ${IGNORE_DASHBOARD} -eq 1 ]; then
+  ./deploy-dashboard.sh
+fi

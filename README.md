@@ -1,9 +1,76 @@
 Kubernetes sandbox
 ==================
 
-## With kind
+## Setup
 
-* Run `./run-kind.sh`. It downloads `kind` and `kubectl`, then create Kubernetes cluster.
+### 1. Use official kind
+
+* Run `get-kind.sh [-i <kind version>] [-n <kindest/node version>]`
+  + Download specified version of `kind` and latest version of `kubectl`.
+  + Then, copy them as `kind-[version]` and `kubectl-[latest version]` into `tools` directory.
+  + Also, create symbolic links `kind` for specified version of `kind` and `kubectl` for `kubectl-[latest version]` into `tools` directory.
+  + Furthermore, create config file for `kind` with specified version of `kindest/node` image, i.e. kubernetes version, as `./tmp/kind.yaml`.
+* Options:
+  + Specify `kind` version and `kindest/node` version with hash from [release site for kind](https://github.com/kubernetes-sigs/kind/releases)
+  + kind version
+    - Default: `v0.11.0`
+  + kindest/node version
+    - Default: `kindest/node:v1.21.1@sha256:fae9a58f17f18f06aeac9772ca8b5ac680ebbed985e266f711d936e91d113bad`
+
+### 1'. Use custom kind (optional)
+
+* Clone `kind` source code with `git clone https://github.com/kubernetes-sigs/kind`.
+* Change code and commit them into your specified branch.
+* Run `build-kind.sh [-s <source code directory>] [-b <branch>] [-n <kindest/node version>]`
+  + Build `kind` from source code.
+  + Then, copy it as `kind-[branch]` into `tools` directory.
+  + Also, create symbolic link `kind` for `kind-[branch]` into `tools` directory.
+* Options
+  + branch
+    - Default: `master`
+  + kind source directory
+    - Default: `${GOPATH}/src/github.com/kubernetes-sigs/kind`
+  + kindest/node version
+    - Specify applicable version of `kindest/node` for your `kind` branch with hash from [release site for kind](https://github.com/kubernetes-sigs/kind/releases).
+    - Default: `kindest/node:v1.21.1@sha256:fae9a58f17f18f06aeac9772ca8b5ac680ebbed985e266f711d936e91d113bad`
+
+### 3. Use custom Kubernetes (optional)
+
+NOTE: Kubernetes v1.21.0 or later needs `docker buildx` to build. And `docker buildx` needs `docker ce` v19.03 or later. In ubuntu 20.04, the version of docker is v19.03.x but not enabled `buildx`. If so, setup `buildx` as followings.
+
+```
+mkdir -p ${HOME}/.docker/cli-plugins
+wget -nc -O ${HOME}/.docker/cli-plugins/docker-buildx https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64`
+chmod +x ${HOME}/.docker/cli-plugins/docker-buildx
+```
+
+Also, create `${HOME}/.docker/config.json` add `{"experimental": "enabled"}` into it. 
+
+* Clone `kubernetes` source code with `git clone https://github.com/kubernetes/kubernetes`.
+* Change code and commit them into your specified branch.
+* Run `build-node-image.sh [-s <source code directory>] [-b <branch>]`
+  + Build all of `kubernetes` components from kubernetes source code.
+  + Then, build kubernetes container image for `kind` node as `kindest/node:[branch]` into local docker host.
+  + Also, copy built `kubectl` to `kubectl-[branch]` in `tools` directory.
+  + Furthermore, create symbolic link `kubectl` for `kubectl-[branch]` into `tools` directory.
+* Options
+  + branch
+    - Default: `master`
+  + kubernetes source directory
+    - Default: `${GOPATH}/src/github.com/kubernetes/kubernetes`
+
+## Run Kubernetes with kind
+
+* Run `./run-kind.sh [-c <kind config file>] [-x]`
+  + Create `kubernetes` cluster with specified version of `kind` and `kindest/node`.
+  + Also, create `./kubectl.sh` as alias of symbolic link `kubectl` that run with `kubeconfig` for created cluster.
+* Options:
+  + kind config
+    - Config for kind cluster.
+    - Default: `./tmp/kind.yaml`
+  + x
+    - Ignore deploying Kubernetes Dashboard
+    - Default: deploying Kubernetes Dashboard
 
 ## Exercise 1 - enough for common application developer
 
