@@ -169,7 +169,7 @@ Also, create `${HOME}/.docker/config.json` add `{"experimental": "enabled"}` int
   ./kubectl.sh apply -f tmp/ingress-nginx-controller.yaml
   ```
 * Create Ingress for nginx Service via nginx-ingress-controller and modify nginx Service.
-  See `example/nginx-ingress.yaml`, create `test/` directory for Ingress `nginx-ingress`, and create `index.html` file into it.
+  See [`example/nginx-ingress.yaml`](example/nginx-ingress.yaml), create `test/` directory for Ingress `nginx-ingress`, and create `index.html` file into it.
   ```
   mkdir -p volume/nginx/test
   echo "Here is /test/ via Ingress" > volume/nginx/test/index.html
