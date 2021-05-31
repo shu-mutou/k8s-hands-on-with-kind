@@ -57,10 +57,12 @@ nodes:
   - containerPort: 30443
     hostPort: 30443
 - role: worker
+  image: kindest/node:${VER}
   extraMounts:
   - hostPath: ${PV_PATH}
     containerPath: /volume
 - role: worker
+  image: kindest/node:${VER}
   extraMounts:
   - hostPath: ${PV_PATH}
     containerPath: /volume
