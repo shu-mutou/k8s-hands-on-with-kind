@@ -18,7 +18,7 @@ do
 done
 
 # Configs
-${KD_NODE_PORT:-"30000"}
+KD_NODE_PORT=${KD_NODE_PORT:-"30000"}
 
 # Setup
 KUBECTL_SH="${DIR}/kubectl.sh"
@@ -69,7 +69,7 @@ ${KUBECTL_SH} apply -f ${KD_SERVICE}
 # Get token for dashboard login
 SECRET_NAME=$(${KUBECTL_SH} -n kubernetes-dashboard get sa kubernetes-dashboard -ojsonpath="{.secrets[0].name}")
 KD_TOKEN=$(${KUBECTL_SH} -n kubernetes-dashboard get secrets ${SECRET_NAME} -o=jsonpath='{.data.token}' | base64 -d)
-echo ${KD_TOKEN} > "${KUBE_DIR}/kd-token"
+echo ${KD_TOKEN} > "${TMP_DIR}/kd-token"
 
 # Finish
 cat <<EOF
@@ -81,7 +81,7 @@ You can access dashboard with "http://localhost:${KD_NODE_PORT}/#/login" and log
 
 ${KD_TOKEN}
 
-Also, token was stored in "${KUBE_DIR}".
+Also, token was stored in "${TMP_DIR}/kd-token".
 !!! THIS TOKEN HAS cluster-admin ROLE, SO IT CAN DO ANYTHING !!!
 !!! TAKE CARE OF HANDLING THIS TOKEN                         !!!
 
