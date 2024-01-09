@@ -19,8 +19,10 @@ do
 done
 
 # Configs
-KIND_VERSION=${KIND_VERSION:-"v0.11.0"}
-KINDEST_VERSION=${KINDEST_VERSION:-"v1.21.1@sha256:fae9a58f17f18f06aeac9772ca8b5ac680ebbed985e266f711d936e91d113bad"}
+KIND_VERSION=${KIND_VERSION:-"$(curl -s -I https://github.com/kubernetes-sigs/kind/releases/latest | grep ^location | tr '/' '\n' | tail -n 1 | head -c -2)"}
+KINDEST_TAG=${KINDEST_TAG:-"$(curl -s https://registry.hub.docker.com/v2/repositories/kindest/node/tags | jq -r .results[0].name)"}
+KINDEST_DIGEST=${KINDEST_DIGEST:-"$(curl -s https://registry.hub.docker.com/v2/repositories/kindest/node/tags | jq -r .results[0].digest)"}
+KINDEST_VERSION=${KINDEST_VERSION:-"${KINDEST_TAG}@${KINDEST_DIGEST}"}
 
 # Setup
 TOOL_DIR="${DIR}/tools"
