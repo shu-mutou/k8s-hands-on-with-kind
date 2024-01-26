@@ -19,7 +19,7 @@ do
 done
 
 # Configs
-KIND_VERSION=${KIND_VERSION:-"$(curl -s -I https://github.com/kubernetes-sigs/kind/releases/latest | grep ^location | tr '/' '\n' | tail -n 1 | head -c -2)"}
+KIND_VERSION=${KIND_VERSION:-"$(curl -s -I https://github.com/kubernetes-sigs/kind/releases/latest | grep ^location | grep -oP 'v\d+\.\d+\.\d+')"}
 KINDEST_TAG=${KINDEST_TAG:-"$(curl -s https://registry.hub.docker.com/v2/repositories/kindest/node/tags | jq -r .results[0].name)"}
 KINDEST_DIGEST=${KINDEST_DIGEST:-"$(curl -s https://registry.hub.docker.com/v2/repositories/kindest/node/tags | jq -r .results[0].digest)"}
 KINDEST_VERSION=${KINDEST_VERSION:-"${KINDEST_TAG}@${KINDEST_DIGEST}"}
